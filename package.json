@@ -2,13 +2,21 @@
   "name": "node-app",
   "version": "1.0.0",
   "description": "my node app",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js"
   },
   "author": "RedHat0107",
   "license": "ISC",
   "devDependencies": {
+    "body-parser": "^1.18.3",
+    "ejs": "^2.6.1",
     "express": "^4.16.3"
+  },
+  "dependencies": {
+    "express-handlebars": "^3.0.0",
+    "method-override": "^3.0.0",
+    "mongoose": "^5.2.17"
   }
 }
