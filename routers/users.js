@@ -1,9 +1,10 @@
 let express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
+//const bcrypt = require('bcrypt');
 const router = express.Router();
 const passport = require('passport');
+const crypto = require("crypto");
 
 
 var jsonParser = bodyParser.json()
@@ -32,8 +33,6 @@ router.get('/register', (req, res) => {
 })
 
 router.post('/register', urlencodedParser, (req, res) => {
-    console.log(req.body);
-    //res.send('register');
     let errors = [];
     if (req.body.password != req.body.password2) {
         errors.push({
@@ -59,12 +58,23 @@ router.post('/register', urlencodedParser, (req, res) => {
                 req.flash('error_msg', '邮箱已经存在,请更换邮箱注册~');
                 res.redirect('/users/register');
             } else {
+                
                 const newUser = new User({
                     name: req.body.name,
                     email: req.body.email,
                     password: req.body.password
                 })
-                bcrypt.genSalt(10, (err, salt) => {
+                let md5 = crypto.createHash("md5");
+                newUser.password = md5.update(newUser.password).digest("hex");
+                newUser.save().then(user => {
+                    req.flash('success_msg', '账号注册成功');
+                    res.redirect('/users/login');
+                }).catch(error => {
+                    req.flash('error_msg', '账号注册失败');
+                    res.redirect('/users/register');
+                })
+                
+                /* bcrypt.genSalt(10, (err, salt) => {
                     bcrypt.hash(newUser.password, salt, (err, hash) => {
                         if (err) {
                             throw err;
@@ -79,7 +89,9 @@ router.post('/register', urlencodedParser, (req, res) => {
                             })
                         }
                     })
-                })
+                }) */
+                
+
             }
         })        
     }
