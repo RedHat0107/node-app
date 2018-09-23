@@ -3,23 +3,33 @@ let express = require('express');
 let exphbs = require('express-handlebars');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const methodOverride = require('method-override')
+const session = require('express-session');
+const flash = require('connect-flash');
+const methodOverride = require('method-override');
+const path = require('path');
+const passport = require('passport');
+const db = require('./config/database');
 
 
 // 初始化express实例
 let app = express();
 
+// load routes
+const ideas = require('./routers/ideas');
+const users = require('./routers/users');
+
+require('./config/passport')(passport);
+
 // 连接数据库
-mongoose.connect('mongodb://localhost/node').then(() => {
+//mongoose.connect('mongodb://localhost/node')
+mongoose.connect(db.mongoURL)
+    .then(() => {
     console.log('mongoDB OK')       
 }).catch((err) => {
     console.log(err);
     });
 
 
-// 引入模型
-require('./modules/idea');
-const Idea = mongoose.model('ideas');
 
 // handlebars middleware
 app.engine('handlebars', exphbs({
@@ -27,13 +37,30 @@ app.engine('handlebars', exphbs({
 }));
 app.set('view engine', 'handlebars');
 
-var jsonParser = bodyParser.json()
-
-var urlencodedParser = bodyParser.urlencoded({ extended: false });
+// 使用静态文件
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(methodOverride('_method'));
 
+// session & flash middleware
+app.use(session({
+    secret: 'secret',
+    resave: true,
+    saveUninitialized: true,
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+  
+app.use(flash());
 
+// 配置全局变量
+app.use((req,res,next) => {
+    res.locals.success_msg = req.flash('success_msg');
+    res.locals.error_msg = req.flash('error_msg');
+    res.locals.error = req.flash('error');
+    res.locals.user = req.user || null;
+    next();
+})
 
 // 配置路由
 app.get('/', (req, res) => {
@@ -47,88 +74,12 @@ app.get('/about', (req,res) => {
     res.render('about');
 })
 
-app.get('/ideas', (req, res) => {  
-    Idea.find({
+// 使用routers
+app.use('/', ideas);
+app.use('/users', users);
 
-    }).sort({date:'desc'}).then(ideas => {
-        res.render('ideas/index', {
-            ideas
-        });
-    });
-    
-})
+const port = process.env.PORT || 3000
 
-app.get('/ideas/add', (req,res) => {
-    res.render('ideas/add');
-})
-
-// 编辑
-app.get('/ideas/edit/:id', (req, res) => {
-    Idea.findOne({
-        _id:req.params.id
-    }).then(idea => {
-        res.render('ideas/edit', {
-            idea
-        });
-    })
-    
-})
-
-
-app.post('/ideas', urlencodedParser, (req, res) => {
-    let errors = [];
-
-    if (!req.body.title) {
-        errors.push({
-            text:'请输入标题!'
-        })
-    }
-    if (!req.body.details) {
-        errors.push({
-            text: '请输入内容!'
-        })
-    }
-    if (errors.length > 0) {
-        res.render('ideas/add',{
-            errors,
-            title: req.body.title,
-            details: req.body.details
-        });
-    } else {
-        const newUser = {
-            title: req.body.title,
-            details: req.body.details,
-        }
-        new Idea(newUser).save().then(idea => {
-            res.redirect('/ideas');
-        })
-    }
-   
-})
-
-// 实现编辑
-app.put('/ideas/:id',urlencodedParser, (req, res) => {
-    Idea.findOne({
-        _id : req.params.id
-    }).then(idea => {
-        idea.title = req.body.title;
-        idea.details = req.body.details;
-
-        idea.save().then(idea => {
-            res.redirect('/ideas');
-        });
-    })
-})
-
-// 实现删除
-app.delete('/ideas/:id', (req, res) => {
-    Idea.remove({
-        _id : req.params.id
-    }).then(() => {
-        res.redirect('/ideas');
-    })   
-})
-
-app.listen(3000, () => {
+app.listen(port, () => {
     console.log(`Server started on 3000`);
 });
