@@ -6,7 +6,6 @@ const router = express.Router();
 const passport = require('passport');
 const crypto = require("crypto");
 
-
 var jsonParser = bodyParser.json()
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
@@ -57,8 +56,7 @@ router.post('/register', urlencodedParser, (req, res) => {
             if (user) {
                 req.flash('error_msg', '邮箱已经存在,请更换邮箱注册~');
                 res.redirect('/users/register');
-            } else {
-                
+            } else {                
                 const newUser = new User({
                     name: req.body.name,
                     email: req.body.email,
